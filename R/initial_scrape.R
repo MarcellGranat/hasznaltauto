@@ -29,7 +29,10 @@ write_rds(available_cars, file = str_c("C:/rprojects/hasznaltauto/data/available
 
 message("Scrape cars")
 
+for (i in 1:100) {
+  
 cars_data <- available_cars %>% 
+  filter(cut(row_number(), 100, FALSE) == i) %>% 
   mutate(
     page = map(url_to_car, SleepyRead),
     data = map(page, html_table, fill = TRUE),
@@ -39,7 +42,9 @@ cars_data <- available_cars %>%
   ) %>% 
   select(url_to_car, data, other_data, description, contact)
 
-write_rds(cars_data, file = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
+write_rds(cars_data, file = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data_", i, "_", Sys.Date(), ".RDS"))
+print(str_c(i, " %"))
+}
 
 tcltk::tkmessageBox(title = "Title of message box",
-             message = str_c("Scrape finished at ", Sys.time(), "\n Number of new cars: ", nrow(cars_data)), icon = "info", type = "ok")
+             message = str_c("Scrape finished at ", Sys.time()), icon = "info", type = "ok")
