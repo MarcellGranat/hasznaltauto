@@ -60,3 +60,10 @@ cars_data <- available_cars %>%
   select(url_to_car, data, other_data, description, contact)
 
 write_rds(cars_data, file = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
+
+beepr::beep(3)
+
+gert::git_add(str_c("C:/rprojects/hasznaltauto/data/available_cars/available_cars_", Sys.Date(), ".RDS"))
+gert::git_add(str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
+git2r::commit(message = "Daily scrape")
+git2r::push()
