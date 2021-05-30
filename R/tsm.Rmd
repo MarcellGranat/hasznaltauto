@@ -1,0 +1,118 @@
+---
+title: "TSM II."
+author: "Marcell P. Granát"
+date: '2021 05 30 '
+output: 
+  powerpoint_presentation: 
+    toc: yes
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE,
+                      message = FALSE, cache = TRUE, comment = "", tidy = TRUE)
+cars_data <- readRDS("C:/rprojects/hasznaltauto/data/cars_data.RDS")
+source('C:/rprojects/hasznaltauto/R/functions.R')
+library(tidymodels)
+```
+
+## Adatgyűjtés
+
+```{r}
+available_cars <- tibble(file_name = list.files("c:/rprojects/hasznaltauto/data/available_cars/")) %>% 
+  transmute(
+    date = str_remove_all(file_name, "available_cars_|.RDS"),
+    date = as.Date(date), 
+    df = map(file_name, ~ readRDS(str_c("c:/rprojects/hasznaltauto/data/available_cars/", .))),
+    ) %>% 
+  unnest(df) %>% 
+  distinct()
+```
+
+```{r}
+available_cars %>% 
+  count(date) %>% 
+  ggplot(aes(date, n)) +
+  geom_col() + 
+  geom_text(aes(date, n, label = n), nudge_y = 3000) + 
+  labs(title = "# of daily found cars")
+```
+
+
+```{r}
+cars_data %>% 
+  select(hd_kepek:esoszenzor) %>% 
+  pivot_longer(everything()) %>% 
+  group_by(name) %>% 
+  summarise(value = mean(value)) %>% 
+  ungroup() %>% 
+  mutate(name = fct_reorder(name, value)) %>% 
+  ggplot() + 
+  aes(value, name) +
+  geom_col()
+```
+
+```{r echo = T}
+cars_lifetime <- available_cars %>% 
+  arrange(date) %>% 
+  group_by(url_to_car) %>% 
+  summarise(start = min(date), until = max(date)) %>% 
+  ungroup() %>% 
+  mutate(
+    selling_type = case_when(
+      start == until ~ "mayfly (probably not transaction)", 
+      start == as.Date("2021-05-22") & until == as.Date("2021-05-30") ~ "still alive",
+      start != as.Date("2021-05-22") & until == as.Date("2021-05-30") ~ "new comer",
+      start == as.Date("2021-05-22") & until != as.Date("2021-05-30") ~ "already sold",
+      start != as.Date("2021-05-22") & until != as.Date("2021-05-30") ~ "well-known",
+      T ~ "uncategorised"
+    )
+  )
+```
+
+```{r}
+cars_lifetime %>% 
+  count(selling_type) %>% 
+  knitr::kable(caption = "Number of cars by selling type")
+```
+
+## Impute data
+
+```{r}
+set.seed(2021)
+
+cars_data <- cars_data %>%
+  na.omit()
+```
+
+
+```{r}
+cars_cv <- vfold_cv(cars_data, 10, strata = vetelar)
+```
+
+```{r}
+cars_rec <- recipe(vetelar ~ ., data = cars_data) %>% 
+  update_role(url_to_car, new_role = "id") %>% 
+  step_string2factor(all_nominal())
+```
+
+```{r}
+decision_tree_rpart_spec <- decision_tree() %>%
+  set_engine('rpart') %>%
+  set_mode('regression')
+```
+
+
+```{r}
+cars_wf <- workflow() %>% 
+  add_recipe(cars_rec) %>% 
+  add_model(decision_tree_rpart_spec)
+```
+
+```{r}
+tree_fit <- cars_wf %>% 
+  fit_resamples(cars_cv)
+```
+
+
+

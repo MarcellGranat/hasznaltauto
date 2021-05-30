@@ -24,6 +24,10 @@ available_cars <- parLapply(cl, url_to_lists, function(url) {
 
 stopCluster(cl)
 
+available_cars <- available_cars %>% 
+  reduce(rbind) %>% 
+  na.omit()
+
 cars_yesterday <- list.files("C:/rprojects/hasznaltauto/data/available_cars/") %>% 
   str_remove_all("available_cars_") %>% 
   str_remove_all(".RDS") %>% 
@@ -36,10 +40,18 @@ cars_yesterday <- list.files("C:/rprojects/hasznaltauto/data/available_cars/") %
 
 write_rds(available_cars, file = str_c("C:/rprojects/hasznaltauto/data/available_cars/available_cars_", Sys.Date(), ".RDS"))
 
+available_cars %>% 
+  anti_join(cars_yesterday) %>% 
+  nrow() %>% 
+  {print(paste("Scrape", ., "new cars!"))}
+
 cars_data <- available_cars %>% 
   anti_join(cars_yesterday) %>%
   mutate(
-    page = map(url_to_car, SleepyRead),
+    page = map(url_to_car, SleepyRead)
+  ) %>% 
+  filter(map_lgl(page, ~ !is.na(.))) %>% 
+  mutate(
     data = map(page, html_table, fill = TRUE),
     other_data = map(page, GetHTMLText, "#adatlap li"),
     description = map(page, GetHTMLText, ".leiras div"),
@@ -48,6 +60,3 @@ cars_data <- available_cars %>%
   select(url_to_car, data, other_data, description, contact)
 
 write_rds(cars_data, file = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
-
-tcltk::tkmessageBox(title = "Title of message box",
-             message = str_c("Scrape finished at ", Sys.time(), "\n Number of new cars: ", nrow(cars_data)), icon = "info", type = "ok")

@@ -1,0 +1,59 @@
+---
+title: "Descriptives"
+author: "Marcell P. Granát"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('C:/rprojects/hasznaltauto/R/functions.R')
+```
+
+## Number of found cars per day
+
+```{r}
+available_cars <- tibble(file_name = list.files("c:/rprojects/hasznaltauto/data/available_cars/")) %>% 
+  transmute(
+    date = str_remove_all(file_name, "available_cars_|.RDS"),
+    date = as.Date(date), 
+    df = map(file_name, ~ readRDS(str_c("c:/rprojects/hasznaltauto/data/available_cars/", .))),
+    ) %>% 
+  unnest(df) %>% 
+  distinct()
+  
+```
+
+
+```{r}
+available_cars %>% 
+  count(date) %>% 
+  ggplot(aes(date, n)) +
+  geom_col() + 
+  geom_text(aes(date, n, label = n), nudge_y = 3000) + 
+  labs(title = "# of daily found cars")
+```
+
+```{r}
+cars_lifetime <- available_cars %>% 
+  arrange(date) %>% 
+  group_by(url_to_car) %>% 
+  summarise(start = min(date), until = max(date)) %>% 
+  ungroup() %>% 
+  mutate(
+    selling_type = case_when(
+      start == until ~ "mayfly (probably not transaction)", 
+      start == as.Date("2021-05-22") & until == as.Date("2021-05-28") ~ "still alive",
+      start != as.Date("2021-05-22") & until == as.Date("2021-05-28") ~ "new comer",
+      start == as.Date("2021-05-22") & until != as.Date("2021-05-28") ~ "already sold",
+      start != as.Date("2021-05-22") & until != as.Date("2021-05-28") ~ "well-known",
+      T ~ "uncategorised"
+    )
+  )
+```
+
+```{r}
+cars_lifetime %>% 
+  count(selling_type) %>% 
+  knitr::kable(caption = "Number of cars by selling type")
+```
+

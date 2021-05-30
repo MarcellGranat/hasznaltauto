@@ -46,6 +46,26 @@ for (i in 1:100) {
     ) %>% 
     select(url_to_car, data, other_data, description, contact)
   
+  available_cars_repeat <- available_cars %>% 
+    filter(cut(row_number(), 100, FALSE) == i) %>% 
+    anti_join(select(cars_data, url_to_car)) 
+  
+  if (nrow(available_cars_repeat) != 0) {
+    
+    available_cars_repeat <- available_cars_repeat %>% 
+      mutate(page = map(url_to_car, SleepyRead)) %>% 
+      filter(map_lgl(page, ~ !is.na(.))) %>% 
+      mutate(
+        data = map(page, html_table, fill = TRUE),
+        other_data = map(page, GetHTMLText, "#adatlap li"),
+        description = map(page, GetHTMLText, ".leiras div"),
+        contact = map(page, GetHTMLText, ".contact-button-text"),
+      ) %>% 
+      select(url_to_car, data, other_data, description, contact)
+    
+    cars_data <- rbind(cars_data, available_cars_repeat)
+  }
+  
   write_rds(cars_data, file = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data_", i, "_", Sys.Date(), ".RDS"))
   print(str_c(i, " %"))
 }
