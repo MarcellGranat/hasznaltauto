@@ -70,3 +70,18 @@ theme_set(
 CPCOLS <- c("#1B213E", "#BF8F55", "#5C6873", "#F5C832", "#100C08", "#855C24", "#3D454C", "#E0AA26", "#101226", "#D1AF84", "#898E97", "#F9D97C", "#4D4B66", "#DEC5A6", "#A9ABB2", "#FBE3A5", "#78748A") %>% 
   set_names(str_c(c("bl", "br", "g", "y"), 
                   c(rep(2, 4), rep(1, 4), rep(3, 4), rep(4, 4), 5)))
+
+
+update_geom_defaults("point", list(fill = CPCOLS["y1"], 
+                                   shape = 21, 
+                                   color = "black", 
+                                   size = 1.4))
+update_geom_defaults("line", 
+                     list(color = "midnightblue", size = 1.4))
+update_geom_defaults("col", 
+                     list(fill = CPCOLS["br2"], color = "black"))
+update_geom_defaults("smooth", list(color = "red4", size = 1.4))
+update_geom_defaults("density", 
+                     list(color = "midnightblue", fill =  "midnightblue", alpha = .3, 
+                          size = 1.4))
+

@@ -6,6 +6,8 @@ output:
   powerpoint_presentation: 
     toc: yes
     fig_caption: yes
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -18,6 +20,144 @@ library(tidymodels)
 
 ## Adatgyűjtés
 
+
+
+```{r}
+library(tidymodels)
+load("C:/rprojects/hasznaltauto/tsm_models_output.RData")
+```
+
+# Változók szelektálása (Regressziós fa)
+
+```{r}
+initial_tree_tune %>% 
+  autoplot()
+```
+
+## Változó fontosság
+
+```{r}
+initial_tree_fit$fit %>% 
+  vip::vi() %>% 
+  arrange(desc(Importance)) %>% 
+  head(15) %>% 
+  ggplot(aes(Variable, Importance)) +
+  geom_col(color = "black") +
+  theme(
+    axis.text.x = element_text(angle = 40, vjust = .7)
+  )
+```
+
+# Modellek
+
+## Setup
+
+- finomhangolás 18 darab paraméter kombináción (3 x 6 mag)
+- 10 részre osztott egyszerű keresztvalidációval
+- paraméter választás legjobb R^2 alapján
+
+## Lineáris regresszió
+
+```{r}
+lm_tune %>% 
+  pull(.metrics) %>% 
+  reduce(rbind) %>% 
+  filter(.metric == "rsq") %>% 
+  mutate(r = row_number() %>% 
+           factor(levels = 1:10)
+         ) %>% 
+  ggplot(aes(r, .estimate)) +
+  geom_col() + 
+  labs(y = "R^2", x = NULL)
+```
+
+```{r}
+lm_fit$fit$fit %>% 
+  tidy() %>% 
+  arrange(abs(statistic)) %>% 
+  head(10) %>% 
+  knitr::kable(caption = "Legnagyobb T-statisztikával rendelkező paraméterek")
+```
+
+## LASSO
+
+```{r}
+lasso_tune %>% 
+  autoplot()
+```
+
+## MARS
+
+```{r}
+mars_tune %>% 
+  autoplot()
+```
+
+```{r}
+mars_fit$fit %>% 
+  summary()
+```
+
+
+```{r}
+tree_tune %>% 
+  autoplot()
+```
+
+```{r}
+tree_fit$fit %>% 
+  rpart.plot::prp()
+```
+
+
+```{r}
+rand_forest_tune %>% 
+  autoplot()
+```
+
+```{r}
+xgboost_tune %>% 
+  autoplot()
+```
+
+
+
+# Szupermodell
+
+```{r}
+load("C:/rprojects/hasznaltauto/tsm_models_preds.RData")
+```
+
+```{r}
+cars_supermodel <- cars_pred %>% 
+  lm(formula = vetelar ~ .)
+
+cars_pred <- cars_supermodel %>% 
+  augment() %>% 
+  rename(super_pred = .fitted) %>% 
+  select(vetelar:super_pred)
+```
+
+
+```{r}
+cars_pred %>% 
+  mutate_at(-1, ~ (. - vetelar)^2) %>% 
+  summarise_at(-1, sum) %>% 
+  pivot_longer(everything()) %>% 
+  mutate(
+    value = value ^.5,
+    name = fct_reorder(name, -value)
+    ) %>% 
+  ggplot(aes(name, value)) + 
+  geom_col() + 
+  scale_x_discrete(labels = function(x) str_remove_all(x, "_pred")) + 
+  labs(x = "Model", y = "rmse")
+```
+
+# A végső cél
+
+## Adatgyűjtés 2.
+
 ```{r}
 available_cars <- tibble(file_name = list.files("c:/rprojects/hasznaltauto/data/available_cars/")) %>% 
   transmute(
@@ -29,7 +169,7 @@ available_cars <- tibble(file_name = list.files("c:/rprojects/hasznaltauto/data/
   distinct()
 ```
 
-```{r}
+```{r fig.width=10}
 available_cars %>% 
   count(date) %>% 
   ggplot(aes(date, n)) +
@@ -49,7 +189,7 @@ cars_data %>%
   mutate(name = fct_reorder(name, value)) %>% 
   ggplot() + 
   aes(value, name) +
-  geom_col()
+  geom_col() # TODO FLIP
 ```
 
 ```{r echo = T}
@@ -61,10 +201,10 @@ cars_lifetime <- available_cars %>%
   mutate(
     selling_type = case_when(
       start == until ~ "mayfly (probably not transaction)", 
-      start == as.Date("2021-05-22") & until == as.Date("2021-05-30") ~ "still alive",
-      start != as.Date("2021-05-22") & until == as.Date("2021-05-30") ~ "new comer",
-      start == as.Date("2021-05-22") & until != as.Date("2021-05-30") ~ "already sold",
-      start != as.Date("2021-05-22") & until != as.Date("2021-05-30") ~ "well-known",
+      start == as.Date("2021-05-22") & until == as.Date("2021-06-08") ~ "still alive",
+      start != as.Date("2021-05-22") & until == as.Date("2021-06-08") ~ "new comer",
+      start == as.Date("2021-05-22") & until != as.Date("2021-06-08") ~ "already sold",
+      start != as.Date("2021-05-22") & until != as.Date("2021-06-08") ~ "well-known",
       T ~ "uncategorised"
     )
   )
@@ -73,46 +213,36 @@ cars_lifetime <- available_cars %>%
 ```{r}
 cars_lifetime %>% 
   count(selling_type) %>% 
-  knitr::kable(caption = "Number of cars by selling type")
-```
-
-## Impute data
-
-```{r}
-set.seed(2021)
-
-cars_data <- cars_data %>%
-  na.omit()
-```
-
-
-```{r}
-cars_cv <- vfold_cv(cars_data, 10, strata = vetelar)
+  knitr::kable(caption = "Megfigyelt autók elérhetőség szerint")
 ```
 
 ```{r}
-cars_rec <- recipe(vetelar ~ ., data = cars_data) %>% 
-  update_role(url_to_car, new_role = "id") %>% 
-  step_string2factor(all_nominal())
+cars_pred <- readRDS("C:/rprojects/hasznaltauto/data/cars_data.RDS") %>% 
+  na.omit() %>% 
+  select(url_to_car) %>% 
+  cbind(cars_pred)
 ```
 
 ```{r}
-decision_tree_rpart_spec <- decision_tree() %>%
-  set_engine('rpart') %>%
-  set_mode('regression')
-```
-
-
-```{r}
-cars_wf <- workflow() %>% 
-  add_recipe(cars_rec) %>% 
-  add_model(decision_tree_rpart_spec)
+df <- cars_pred %>% 
+  transmute(url_to_car, relative_price = vetelar - super_pred, vetelar)
 ```
 
 ```{r}
-tree_fit <- cars_wf %>% 
-  fit_resamples(cars_cv)
+df %>% 
+  left_join(cars_lifetime) %>% 
+  ggplot() +
+  aes(relative_price, color = selling_type) +
+  geom_boxplot()
 ```
 
-
+```{r}
+df %>% 
+  left_join(cars_lifetime) %>% 
+  filter(selling_type == "well-known") %>% 
+  mutate(lifetime = until - start) %>% 
+  ggplot(aes(relative_price, lifetime)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+```
 

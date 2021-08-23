@@ -28,7 +28,7 @@ available_cars <- available_cars %>%
   reduce(rbind) %>% 
   na.omit()
 
-cars_yesterday <- list.files("C:/rprojects/hasznaltauto/data/available_cars/") %>% 
+cars_yesterday <- list.files("C:/rprojects/hasznaltauto/data/available_cars/") %>%
   str_remove_all("available_cars_") %>% 
   str_remove_all(".RDS") %>% 
   as.Date() %>% 
@@ -37,6 +37,12 @@ cars_yesterday <- list.files("C:/rprojects/hasznaltauto/data/available_cars/") %
   last() %>% 
   {read_rds(str_c("C:/rprojects/hasznaltauto/data/available_cars/available_cars_", ., ".RDS"))} %>% 
   select(url_to_car)
+
+cars_yesterday <- list.files("C:/rprojects/hasznaltauto/data/available_cars/") %>% 
+  map(~ read_rds(str_c("C:/rprojects/hasznaltauto/data/available_cars/", .))) %>% 
+  reduce(rbind) %>% 
+  select(url_to_car) %>% 
+  unique()
 
 write_rds(available_cars, file = str_c("C:/rprojects/hasznaltauto/data/available_cars/available_cars_", Sys.Date(), ".RDS"))
 
@@ -61,9 +67,10 @@ cars_data <- available_cars %>%
 
 write_rds(cars_data, file = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
 
-beepr::beep(3)
 
-gert::git_add(str_c("C:/rprojects/hasznaltauto/data/available_cars/available_cars_", Sys.Date(), ".RDS"))
-gert::git_add(str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
-git2r::commit(message = "Daily scrape")
-git2r::push()
+# push to GitHub --------------------------------------------------------------------
+
+git2r::add(repo = , path = str_c("C:/rprojects/hasznaltauto/data/available_cars/available_cars_", Sys.Date(), ".RDS"))
+git2r::add(path = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
+git2r::commit(message = "Daily scrape", all = T)
+gert::git_push()

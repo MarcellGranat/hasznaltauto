@@ -108,5 +108,26 @@ cars_data <- cars_data %>%
     csomagtarto = as.integer(csomagtarto),
   )
 
+cars_data <- cars_data %>% 
+  mutate(
+    brand = gsub(".*szemelyauto/", "", url_to_car),
+    brand = gsub("/.*", "", brand),
+    brand = fct_lump(brand, n = 50),
+    nyari_gumi_meret = gsub("/.*",  "", nyari_gumi_meret),
+    nyari_gumi_meret = as.integer(nyari_gumi_meret),
+    sebessegvalto_fokozatszam = str_remove_all(sebessegvalto_fajtaja, "\\D"),
+    sebessegvalto_fokozatszam = as.integer(sebessegvalto_fokozatszam),
+    sebessegvalto_fokozatszam = ifelse(is.na(sebessegvalto_fokozatszam), 0, sebessegvalto_fokozatszam),
+    sebessegvalto_fajtaja = case_when(
+      str_detect(sebessegvalto_fajtaja, "tiptronic") ~ "tiptronic",
+      str_detect(sebessegvalto_fajtaja, "zekvenciális") ~ "szekvenciális",
+      str_detect(sebessegvalto_fajtaja, "anuális") ~ "manuáis",
+      str_detect(sebessegvalto_fajtaja, "utomata") ~ "automata",
+      TRUE ~ "egyéb"
+    )
+  ) %>% 
+  mutate_if(is.character, as.factor)
+
+
 write_rds(cars_data, "C:/rprojects/hasznaltauto/data/cars_data.RDS")
 
