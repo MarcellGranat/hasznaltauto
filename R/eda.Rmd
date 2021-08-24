@@ -1,7 +1,7 @@
 ---
-title: "Descriptives"
+title: "EDA"
 author: "Marcell P. Granát"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -42,10 +42,10 @@ cars_lifetime <- available_cars %>%
   mutate(
     selling_type = case_when(
       start == until ~ "mayfly (probably not transaction)", 
-      start == as.Date("2021-05-22") & until == as.Date("2021-05-28") ~ "still alive",
-      start != as.Date("2021-05-22") & until == as.Date("2021-05-28") ~ "new comer",
-      start == as.Date("2021-05-22") & until != as.Date("2021-05-28") ~ "already sold",
-      start != as.Date("2021-05-22") & until != as.Date("2021-05-28") ~ "well-known",
+      start == min(start) & until == max(until) ~ "still alive",
+      start != min(start) & until == max(until) ~ "new comer",
+      start == min(start) & until != max(until) ~ "already sold",
+      start != min(start) & until != max(until) ~ "well-known",
       T ~ "uncategorised"
     )
   )
