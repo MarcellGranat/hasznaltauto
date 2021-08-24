@@ -34,13 +34,11 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
-*.csv
 *.RData
 *.Rproj
 *.RDataTmp
 *.pptx
 *.zip
-*.bat
 
 
 # R Environment Variables
