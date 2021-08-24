@@ -1,6 +1,15 @@
 source('C:/rprojects/hasznaltauto/R/functions.R')
 library(parallel)
 
+library(httr)
+req <- GET("https://api.github.com/repos/MarcellGranat/hasznaltauto/git/trees/main?recursive=1")
+stop_for_status(req)
+filelist <- unlist(lapply(content(req)$tree, "[", "path"), use.names = F)
+
+if (str_c("data/cars_data/cars_data", Sys.Date(), ".RDS") %in% filelist & str_c("data/available_cars/available_cars_", Sys.Date(), ".RDS") %in% filelist) {
+  stop("A mai adatok már fenn vannak a github repoban")
+}
+
 n_pages <- SleepyRead("https://www.hasznaltauto.hu/talalatilista/PCOG2U6RV3NDADH5S56ACFFYNTQXCE52JAJZUNDJV6K2DJUEEYYUVUXKALRN7ZZUUW2IZJ2YY53HY7DSAJZLNFBXF6TZSFAVAQWMSKOYMIRVNDCNUXYFONFIF5IAO2VBXEKKBR4F3MHD6KSXMBAN6QAB7YVFMOZZ5EXGSGGW4BZKG3CXHYCODKYDC5JGB3PS76VV6E35I6OMVMZM5CIJ7QEZXLSSRRNUHWLVFFHAYDXBK2HF34KGI4J72BSN7ZDY4YHB32RDAZ5JH3XXUU2ZYAU4UBRTJEPCYASFTAKNIHHWKO3MVRAA6PXWMHBA47NNQOHTHGC5GZUYO7L3CX3YO54HU43CZQJHDH6IHLSRPP2CTEPRQB662A4ZL7FIPX4OBQCUK5STUT2EPW7WO6Z63NSKQO7EXIP43KSR4ZOLWXJACXPKMAJAMXAFXHVK5YDCIMCWVXJDLQJNJOPWE7KPCOWW4JQSG3CYIIEOH7L3OCYH7JI2CVRPXNT3UABTWL4EZIGFUR7IUOL5TVHMKWYBOKH33NAGWOCTCAVZAC3ZKPEZB3ITFI4U24IW4MWMLMYYZ5JDZD7RHTCQXMN2OMYGHTOQS3UGUN64MQGPPXXEHZ3AMVJZLPGMBE32VXI6GCDF5KWJQRTTUUVFFZNKLMVWN7DVAYBAZX4IRPE7W26F32WIN6CHPQ5DVKFP2GBTFCQ2VMIJ7X7HWDJTA2UKGN2M2PVU5ICQ42GOOH3ORNXWX5CJOXJLWKLWNGDDCHIJ6X4IGZSOSSEOZIQ34TC7T776KEDFDNLVVGORVLYQH4ZUWQL7J6MBLQE5UDDY32J4Q3HDT62K6DO2AHM7WP6VKGDZ6") %>% 
   html_nodes(".last a") %>% 
   html_text() %>% 
@@ -67,10 +76,3 @@ cars_data <- available_cars %>%
 
 write_rds(cars_data, file = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
 
-
-# push to GitHub --------------------------------------------------------------------
-
-git2r::add(repo = , path = str_c("C:/rprojects/hasznaltauto/data/available_cars/available_cars_", Sys.Date(), ".RDS"))
-git2r::add(path = str_c("C:/rprojects/hasznaltauto/data/cars_data/cars_data", Sys.Date(), ".RDS"))
-git2r::commit(message = "Daily scrape", all = T)
-gert::git_push()
