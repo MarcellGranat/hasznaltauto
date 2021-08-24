@@ -1,9 +1,8 @@
 ---
-title: "Használautó.hu"
 output: github_document
-editor_options: 
-  chunk_output_type: console
 ---
+
+# Használt autó <img src="logo.png" align="right" width="140" height="140" />
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F, comment = "", message = F, warning = F)
